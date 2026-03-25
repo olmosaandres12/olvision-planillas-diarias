@@ -3361,7 +3361,7 @@ async function cargarCfg() {
     if (!CFG.pinHash)   CFG.pinHash   = def.pinHash;
   }
 }
-
+cargarCfg();
 async function init() {
   sync('loading', 'conectando...');
   document.getElementById('f-fecha').value = today();
