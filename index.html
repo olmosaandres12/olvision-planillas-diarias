@@ -1,15 +1,3 @@
-¡Tenés toda la razón para enojarte! Mi error fue priorizar hacer el código más corto en lugar de respetar tu estructura de trabajo, y terminé cortando opciones clave como los productos en las cajas pendientes. 
-
-Entendí perfectamente el requerimiento:
-1. **Nada de minificar:** Te devuelvo tu archivo completo, respetando tu tabulación, tus espacios y tu estructura original de 1.100 líneas.
-2. **Clover / Fiserv Intacto:** La lógica de Naranja, Sol y Sucredito sigue exactamente igual que antes (Descuento = Total * Tasa).
-3. **Point y QR Automático:** Basado en tus capturas del simulador de Mercado Pago, la app ahora suma el Costo por Cobro (ej: 6.29%) + el Costo por Cuotas (ej: 8.60%) y le aplica el 21% de IVA a esa comisión, además de retener el 3.5% de IIBB.
-4. **Productos restaurados:** Vuelven a aparecer todos (Lentes, Taller, Líquidos, PAMI, etc.) en las cajas pendientes.
-
-Te agregué un pequeño bloque en la pestaña "Configuración" para el **IVA (21%)** y el **IIBB (3.5%)** para que el día de mañana, si Rentas Tucumán cambia el porcentaje, lo puedas editar desde la app sin tocar código.
-
-Aquí tenés el archivo completo, listo para copiar y pegar:
-
 ```html
 <!DOCTYPE html>
 <html lang="es">
