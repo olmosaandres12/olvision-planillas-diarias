@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1011,21 +1010,21 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="card card-accent">
       <div class="card-title">🏛️ Impuestos (Aplica a MP Point)</div>
       <div class="form-grid">
-        <div class="form-group"><label>IVA (%)</label><input type="number" id="cfg-iva" step="0.1" placeholder="21.0"></div>
+        <div class="form-group"><label>IVA sobre comisiones (%)</label><input type="number" id="cfg-iva" step="0.1" placeholder="21.0"></div>
         <div class="form-group"><label>IIBB Tucumán (%)</label><input type="number" id="cfg-iibb" step="0.1" placeholder="3.5"></div>
       </div>
     </div>
 
     <div class="card card-info">
-      <div class="card-title">🔵 MP Point — tasas puras del simulador</div>
+      <div class="card-title">🔵 MP Point — tasas puras (solo lo que cobra MP)</div>
       <div class="form-grid">
         <div class="form-section-title">Débito y QR</div>
         <div class="form-group"><label>Débito %</label><input type="number" id="pt-deb" step="0.01" placeholder="3.25"></div>
         <div class="form-group"><label>QR (Pix/MP) %</label><input type="number" id="pt-qr" step="0.01" placeholder="0.80"></div>
-        <div class="form-section-title">Crédito 1 pago</div>
+        <div class="form-section-title">Crédito 1 pago (Costo de Cobro)</div>
         <div class="form-group"><label>1 Pago Bancario %</label><input type="number" id="pt-cred1-banc" step="0.01" placeholder="6.29"></div>
         <div class="form-group"><label>1 Pago No Bancario %</label><input type="number" id="pt-cred1-nobanc" step="0.01" placeholder="6.29"></div>
-        <div class="form-section-title">Cuotas sin interés (MP Point)</div>
+        <div class="form-section-title">Costo por ofrecer Cuotas sin interés</div>
         <div class="form-group"><label>2 cuotas %</label><input type="number" id="pt-c2" step="0.01" placeholder="6.40"></div>
         <div class="form-group"><label>3 cuotas %</label><input type="number" id="pt-c3" step="0.01" placeholder="8.60"></div>
         <div class="form-group"><label>6 cuotas %</label><input type="number" id="pt-c6" step="0.01" placeholder="13.90"></div>
@@ -1135,7 +1134,7 @@ function defCfg() {
   return {
     tasaIVA: 21.0,
     tasaIIBB: 3.5,
-    // MP Point (Actualizados según simulador oficial)
+    // MP Point
     point: {
       deb: 3.25,
       qr: 0.80,
@@ -1147,7 +1146,7 @@ function defCfg() {
       c9: 19.70,
       c12: 24.30
     },
-    // Clover / FISERV (Se mantiene intacto)
+    // Clover / FISERV
     fiserv: {
       deb: 5.03,
       qr: 1.31,
@@ -1259,7 +1258,7 @@ function sync(state, lbl) {
 }
 
 // ══════════════════════════════════════════════════
-// LÓGICA DE TASAS — MOTOR FINANCIERO
+// LÓGICA FINANCIERA (NUEVA VERSIÓN)
 // ══════════════════════════════════════════════════
 function calcularFinanciero(bruto, terminal, subtarjeta, fp, cuotas) {
   cuotas = parseInt(cuotas) || 1;
@@ -1271,7 +1270,7 @@ function calcularFinanciero(bruto, terminal, subtarjeta, fp, cuotas) {
     return { desc: descTransf, neto: bruto - descTransf, tasaEfectiva: tt };
   }
 
-  // ── MP POINT (Simulador exacto con IVA e IIBB) ──
+  // MP POINT CON IMPUESTOS
   if (terminal === 'point') {
     const pt = CFG.point;
     let tasaCobro = 0;
@@ -1280,7 +1279,7 @@ function calcularFinanciero(bruto, terminal, subtarjeta, fp, cuotas) {
     if (fp === 'Debito') tasaCobro = parseFloat(pt.deb) || 0;
     else if (fp === 'QR') tasaCobro = parseFloat(pt.qr) || 0;
     else if (fp === 'Cred Bancario' || fp === 'Cred No Bancario') {
-      tasaCobro = parseFloat(pt.cred1Banc) || 0; // Usamos 1 pago como base
+      tasaCobro = parseFloat(pt.cred1Banc) || 0;
       if (cuotas === 2) tasaCuotas = parseFloat(pt.c2) || 0;
       if (cuotas === 3) tasaCuotas = parseFloat(pt.c3) || 0;
       if (cuotas === 6) tasaCuotas = parseFloat(pt.c6) || 0;
@@ -1302,7 +1301,7 @@ function calcularFinanciero(bruto, terminal, subtarjeta, fp, cuotas) {
     return { desc: descTotal, neto: bruto - descTotal, tasaEfectiva: Number(efectiva.toFixed(2)) };
   }
 
-  // ── FISERV / CLOVER (Se mantiene intacto: Total * Tasa) ──
+  // CLOVER / FISERV (Lógica Simple: Total menos Tasa)
   let t = 0;
   if (terminal === 'fiserv') {
     const fi = CFG.fiserv;
@@ -1372,7 +1371,6 @@ function onTerminalChange() {
   }
 
   if (terminal === 'fiserv') {
-    // Primero elegir subtarjeta
     subSel.innerHTML = `
       <option value="">— seleccionar —</option>
       <option value="fiserv-base">FISERV genérico (Débito / QR / 1 pago)</option>
@@ -1384,7 +1382,6 @@ function onTerminalChange() {
 }
 
 function onSubtarjetaChange() {
-  const terminal   = document.getElementById('f-terminal').value;
   const subtarjeta = document.getElementById('f-subtarjeta').value;
   const fpSel      = document.getElementById('f-fp');
   const cuotasGrp  = document.getElementById('cuotas-group');
@@ -1404,33 +1401,19 @@ function onSubtarjetaChange() {
       <option value="Cred No Bancario">Tarjeta de Crédito No Bancarizada (1 pago)</option>`;
     fpSel.disabled = false;
   } else if (subtarjeta === 'naranja') {
-    fpSel.innerHTML = `
-      <option value="">— seleccionar —</option>
-      <option value="T Credito">Crédito Naranja</option>`;
+    fpSel.innerHTML = `<option value="">— seleccionar —</option><option value="T Credito">Crédito Naranja</option>`;
     fpSel.disabled = false;
-    // Cuotas Naranja: 1/3/5
-    cuotasSel.innerHTML = `
-      <option value="1">1 cuota</option>
-      <option value="3">3 cuotas</option>
-      <option value="5">5 cuotas</option>`;
+    cuotasSel.innerHTML = `<option value="1">1 cuota</option><option value="3">3 cuotas</option><option value="5">5 cuotas</option>`;
     cuotasGrp.style.display = 'flex';
   } else if (subtarjeta === 'sol') {
-    fpSel.innerHTML = `
-      <option value="">— seleccionar —</option>
-      <option value="T Credito">Crédito SOL</option>`;
+    fpSel.innerHTML = `<option value="">— seleccionar —</option><option value="T Credito">Crédito SOL</option>`;
     fpSel.disabled = false;
-    cuotasSel.innerHTML = `
-      <option value="1">1 cuota</option>
-      <option value="3">3 cuotas</option>`;
+    cuotasSel.innerHTML = `<option value="1">1 cuota</option><option value="3">3 cuotas</option>`;
     cuotasGrp.style.display = 'flex';
   } else if (subtarjeta === 'sucredito') {
-    fpSel.innerHTML = `
-      <option value="">— seleccionar —</option>
-      <option value="T Credito">Crédito Sucredito</option>`;
+    fpSel.innerHTML = `<option value="">— seleccionar —</option><option value="T Credito">Crédito Sucredito</option>`;
     fpSel.disabled = false;
-    cuotasSel.innerHTML = `
-      <option value="1">1 cuota</option>
-      <option value="3">3 cuotas</option>`;
+    cuotasSel.innerHTML = `<option value="1">1 cuota</option><option value="3">3 cuotas</option>`;
     cuotasGrp.style.display = 'flex';
   }
 
@@ -1439,25 +1422,16 @@ function onSubtarjetaChange() {
 
 function onFPChange() {
   const terminal   = document.getElementById('f-terminal').value;
-  const subtarjeta = document.getElementById('f-subtarjeta')?.value || '';
   const fp         = document.getElementById('f-fp').value;
   const cuotasGrp  = document.getElementById('cuotas-group');
   const cuotasSel  = document.getElementById('f-cuotas');
 
-  // Para MP Point en crédito, mostrar cuotas
   if (terminal === 'point' && (fp === 'Cred Bancario' || fp === 'Cred No Bancario')) {
-    cuotasSel.innerHTML = `
-      <option value="1">1 pago</option>
-      <option value="2">2 cuotas</option>
-      <option value="3">3 cuotas</option>
-      <option value="6">6 cuotas</option>
-      <option value="9">9 cuotas</option>
-      <option value="12">12 cuotas</option>`;
+    cuotasSel.innerHTML = `<option value="1">1 pago</option><option value="2">2 cuotas</option><option value="3">3 cuotas</option><option value="6">6 cuotas</option><option value="9">9 cuotas</option><option value="12">12 cuotas</option>`;
     cuotasGrp.style.display = 'flex';
   } else if (terminal === 'point') {
     cuotasGrp.style.display = 'none';
   }
-  // Para fiserv las cuotas se setean en onSubtarjetaChange
 
   updateTasaPreview();
 }
@@ -1496,9 +1470,7 @@ function updateTasaPreview() {
   const cLabel    = cuotas > 1 ? ` · ${cuotas}c` : '';
   
   if (fp === 'Transferencia') {
-     p.textContent = res.tasaEfectiva > 0
-      ? `Tasa ${res.tasaEfectiva}% → desc $${fmt(res.desc)} → neto $${fmt(res.neto)}`
-      : '✓ Sin descuento — Transferencia';
+     p.textContent = res.tasaEfectiva > 0 ? `Tasa ${res.tasaEfectiva}% → desc $${fmt(res.desc)} → neto $${fmt(res.neto)}` : '✓ Sin descuento — Transferencia';
      p.style.color = res.tasaEfectiva > 0 ? 'var(--warn)' : 'var(--success)';
      return;
   }
@@ -1533,8 +1505,6 @@ function showView(name, btn) {
 // ══════════════════════════════════════════════════
 async function guardarRegistro() {
   const fecha = today();
-
-  // Verificar que la caja esté abierta
   const apHoy = APERTURAS.find(a => a.fecha === fecha);
   if (!apHoy || apHoy.cerrada) {
     toast('⚠ Abrí la caja antes de registrar ventas', 'err'); return;
@@ -1548,19 +1518,15 @@ async function guardarRegistro() {
 
   if (!total) { toast('⚠ Ingresá el monto de la venta', 'err'); return; }
 
-  // Normalizar subtarjeta
   const stKey = (subtarjeta === 'fiserv-base') ? '' : subtarjeta;
-
   const resFinanciero = calcularFinanciero(total, terminal, stKey, fp, cuotas);
   const tasa = resFinanciero.tasaEfectiva;
   const neto = resFinanciero.neto;
 
-  // Etiqueta legible para fp guardado
   let fpLabel = fp;
   if ((fp === 'Cred Bancario' || fp === 'Cred No Bancario' || fp === 'T Credito') && cuotas > 1) {
     fpLabel = `${fp} ${cuotas}c`;
   }
-
   const subtarjetaLabel = stKey || (subtarjeta === 'fiserv-base' ? 'FISERV' : '');
 
   const reg = {
@@ -1585,10 +1551,7 @@ async function guardarRegistro() {
   btn.disabled = true; btn.textContent = 'Guardando...';
   sync('loading', 'guardando...');
 
-  // Intento completo primero
   let { error } = await db.from('registros').insert(reg);
-
-  // Si falla por columnas faltantes, reintento sin columnas opcionales
   if (error && error.message && error.message.includes('column')) {
     const regBase = {
       fecha, nombre: reg.nombre, orden: reg.orden, producto: reg.producto,
@@ -1598,7 +1561,6 @@ async function guardarRegistro() {
     };
     const res2 = await db.from('registros').insert(regBase);
     error = res2.error;
-    if (!error) toast('\u26a0 Guardado sin columnas nuevas. Ejecut\u00e1 el SQL de migraci\u00f3n en Supabase.', 'warn');
   }
 
   btn.disabled = false; btn.textContent = 'Guardar venta';
@@ -1650,12 +1612,10 @@ function getApertura(fecha) {
 }
 
 function getCajaAbierta() {
-  // Busca apertura de hoy sin cierre
   return APERTURAS.find(a => a.fecha === today() && !a.cerrada) || null;
 }
 
 function getCajasPendientes() {
-  // Aperturas anteriores a hoy sin cerrar
   return APERTURAS.filter(a => a.fecha < today() && !a.cerrada);
 }
 
@@ -1668,7 +1628,6 @@ async function guardarApertura() {
   if (!fecha) { toast('⚠ Seleccioná una fecha', 'err'); return; }
   if (monto < 0) { toast('⚠ Ingresá el efectivo inicial (puede ser 0)', 'err'); return; }
 
-  // Verificar si ya existe apertura para esa fecha
   const yaExiste = APERTURAS.find(a => a.fecha === fecha);
   if (yaExiste) { toast(`⚠ Ya existe una apertura para ${fmtD(fecha)}`, 'err'); return; }
 
@@ -1684,37 +1643,13 @@ async function guardarApertura() {
   });
   if (error) {
     if (error.code === '42P01') {
-      toast('❌ La tabla "aperturas" no existe en Supabase', 'err');
-      document.getElementById('cajas-pendientes-wrap').innerHTML = `
-        <div class="alert-box" style="background:rgba(255,95,95,0.08);border:1px solid rgba(255,95,95,0.3);text-align:left;margin-top:12px">
-          <div class="alert-icon">❌</div>
-          <div>
-            <strong style="color:#ff5f5f">Falta crear la tabla <code>aperturas</code> en Supabase</strong><br>
-            <span style="font-size:0.78rem;color:var(--muted)">Andá a <strong>Supabase → SQL Editor</strong> y ejecutá:</span><br>
-            <code style="display:block;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:0.72rem;color:var(--accent);line-height:1.8">
-              create table aperturas (<br>
-              &nbsp;&nbsp;id bigserial primary key,<br>
-              &nbsp;&nbsp;fecha date not null,<br>
-              &nbsp;&nbsp;efectivo_inicial numeric default 0,<br>
-              &nbsp;&nbsp;vendedor text,<br>
-              &nbsp;&nbsp;obs text,<br>
-              &nbsp;&nbsp;cerrada boolean default false,<br>
-              &nbsp;&nbsp;cerrada_at timestamptz,<br>
-              &nbsp;&nbsp;efectivo_contado numeric,<br>
-              &nbsp;&nbsp;efectivo_esperado numeric,<br>
-              &nbsp;&nbsp;diferencia_cierre numeric,<br>
-              &nbsp;&nbsp;created_at timestamptz default now()<br>
-              );
-            </code>
-          </div>
-        </div>`;
+      toast('❌ Falta crear la tabla "aperturas" en Supabase', 'err');
       return;
     }
     toast('Error: ' + error.message, 'err'); return;
   }
   await cargarAperturas();
   CAJA_HOY = getCajaAbierta();
-  // Asegurar que view-carga esté activa y hacer la transición visual
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-carga').classList.add('active');
@@ -1854,13 +1789,6 @@ function cancelarCierre() {
   if (btn) btn.style.display='inline-flex';
 }
 
-// Apertura de una caja pendiente (desde la vista Pendientes)
-async function abrirCajaPendiente(fecha) {
-  // Navegar a esa caja para completar cierre
-  showView('apertura', document.getElementById('nav-apertura'));
-  renderCajasPendientes(fecha);
-}
-
 async function cerrarCajaPendiente(id, fecha) {
   const contado = parseFloat(document.getElementById(`contado-pend-${id}`)?.value);
   const ap = APERTURAS.find(a => a.id === id);
@@ -1899,22 +1827,18 @@ function renderCajaView() {
   const elAbierta = document.getElementById('caja-abierta');
   const elCerrada = document.getElementById('caja-cerrada');
 
-  // Fill vendedores en el form de apertura
   const apV = document.getElementById('ap-vendedor');
   if (apV) {
     apV.innerHTML = '<option value="">— seleccionar —</option>' +
       CFG.vendedores.map(v => `<option>${v}</option>`).join('');
   }
 
-  // Actualizar label fecha en el form de apertura
   const lbl = document.getElementById('apertura-fecha-label');
   if (lbl) lbl.textContent = new Date(hoy+'T12:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'});
 
-  // Precargar campo de fecha de apertura con hoy
   const apFecha = document.getElementById('ap-fecha');
   if (apFecha) apFecha.value = hoy;
 
-  // Mostrar cajas pendientes en el panel de apertura
   const pendWrap = document.getElementById('cajas-pendientes-wrap');
   if (pendWrap && pendientes.length > 0) {
     pendWrap.innerHTML = `
@@ -1925,7 +1849,6 @@ function renderCajaView() {
           <br><button class="btn btn-ghost" style="margin-top:8px;font-size:0.7rem;padding:5px 12px" onclick="showView('apertura', document.getElementById('nav-apertura'))">Ver cajas pendientes →</button>
         </div>
       </div>`;
-    // Badge en nav
     const navAp = document.getElementById('nav-apertura');
     if (navAp) navAp.textContent = `Apertura (${pendientes.length})`;
   } else {
@@ -1935,18 +1858,15 @@ function renderCajaView() {
   }
 
   if (!apHoy) {
-    // Sin apertura hoy
     elSinAp.style.display  = 'block';
     elAbierta.style.display = 'none';
     elCerrada.style.display = 'none';
   } else if (!apHoy.cerrada) {
-    // Caja abierta
     CAJA_HOY = apHoy;
     elSinAp.style.display  = 'none';
     elAbierta.style.display = 'block';
     elCerrada.style.display = 'none';
 
-    // Header bar
     document.getElementById('caja-header-bar').innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(61,255,160,0.07);border:1px solid rgba(61,255,160,0.2);border-radius:14px;padding:12px 20px;margin:16px 24px 0;gap:12px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:10px">
@@ -1963,7 +1883,6 @@ function renderCajaView() {
       </div>
       <div id="panel-corregir-fecha" style="display:none;margin:8px 24px 0"></div>`;
 
-    // Resetear panel de cierre por si quedó abierto
     const panelCierre = document.getElementById('panel-cierre');
     if (panelCierre) { panelCierre.style.display = 'none'; panelCierre.innerHTML = ''; }
     const btnCerrar = document.getElementById('btn-cerrar-caja');
@@ -1974,7 +1893,6 @@ function renderCajaView() {
     renderResumenDia(hoy);
 
   } else {
-    // Caja cerrada
     elSinAp.style.display  = 'none';
     elAbierta.style.display = 'none';
     elCerrada.style.display = 'block';
@@ -1982,7 +1900,6 @@ function renderCajaView() {
     const ci = document.getElementById('caja-cerrada-info');
     if (ci) ci.textContent = `${new Date(hoy+'T12:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'})} · Cerrada a las ${apHoy.cerrada_at ? new Date(apHoy.cerrada_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '—'}`;
 
-    // Resumen cierre
     const rc = document.getElementById('resumen-cierre-card');
     if (rc) {
       const regs = REG.filter(r => r.fecha === hoy);
@@ -2047,11 +1964,9 @@ function renderResumenDia(fecha) {
   if (!data.length) { card.style.display = 'none'; return; }
   card.style.display = 'block';
 
-  // Agrupar por forma de pago (normalizada)
   const grupos = {};
   data.forEach(r => {
     let key = r.fp || 'Sin especificar';
-    // Simplificar label cuotas para agrupar
     const base = key.replace(/ \d+c$/, '');
     const keyFull = r.subtarjeta ? `${base} · ${r.subtarjeta}` : base;
     if (!grupos[keyFull]) grupos[keyFull] = { bruto:0, neto:0, count:0, desc:0 };
@@ -2091,9 +2006,6 @@ function renderResumenDia(fecha) {
     </tr>`;
 }
 
-// ══════════════════════════════════════════════════
-// TABS HELPER
-// ══════════════════════════════════════════════════
 function getMeses()    { return [...new Set(REG.map(r => mesKey(r.fecha)).filter(Boolean))].sort(); }
 function getAllMeses()  { const m1=getMeses(); const m2=[...new Set(GASTOS.map(g=>mesKey(g.fecha)).filter(Boolean))]; return [...new Set([...m1,...m2])].sort(); }
 
@@ -2110,7 +2022,7 @@ function renderTabs(cid, active, fn) {
 }
 
 // ══════════════════════════════════════════════════
-// ARQUEO
+// ARQUEO / BALANCE / RENTABILIDAD / KPI / REPORTE
 // ══════════════════════════════════════════════════
 function renderArqueo(mes) {
   const meses = getMeses();
@@ -2198,9 +2110,6 @@ function renderArqueo(mes) {
   }).join('');
 }
 
-// ══════════════════════════════════════════════════
-// BALANCE
-// ══════════════════════════════════════════════════
 function renderBalance(mes) {
   const allMeses = getAllMeses();
   const c = document.getElementById('balance-tabs');
@@ -2275,9 +2184,6 @@ function renderBalance(mes) {
     </div>`;
 }
 
-// ══════════════════════════════════════════════════
-// RENTABILIDAD
-// ══════════════════════════════════════════════════
 function renderRentabilidad(mes) {
   const meses = getMeses();
   if (!meses.length) {
@@ -2394,9 +2300,6 @@ function renderRentabilidad(mes) {
   document.getElementById('rent-contenido').innerHTML = html;
 }
 
-// ══════════════════════════════════════════════════
-// KPIs
-// ══════════════════════════════════════════════════
 function renderKPIs(mes) {
   const meses = getMeses();
   if (!meses.length) {
@@ -2472,9 +2375,6 @@ function renderKPIs(mes) {
   document.getElementById('kpis-contenido').innerHTML = html;
 }
 
-// ══════════════════════════════════════════════════
-// REPORTE
-// ══════════════════════════════════════════════════
 function renderReporte(mes) {
   const meses = getMeses();
   if (!meses.length) return;
@@ -2532,784 +2432,7 @@ function renderReporte(mes) {
 }
 
 // ══════════════════════════════════════════════════
-// GASTOS
-// ══════════════════════════════════════════════════
-async function guardarGasto() {
-  const fecha     = document.getElementById('g-fecha').value;
-  const categoria = document.getElementById('g-categoria').value;
-  const monto     = parseFloat(document.getElementById('g-monto').value) || 0;
-  if (!fecha)    { toast('⚠ Ingresá la fecha', 'err'); return; }
-  if (!categoria){ toast('⚠ Seleccioná una categoría', 'err'); return; }
-  if (!monto)    { toast('⚠ Ingresá el monto', 'err'); return; }
-
-  const gasto = {
-    fecha, categoria,
-    descripcion:  document.getElementById('g-desc').value.trim(),
-    monto,
-    fp:           document.getElementById('g-fp').value,
-    responsable:  document.getElementById('g-resp').value.trim(),
-    obs:          document.getElementById('g-obs').value.trim()
-  };
-
-  const btn = document.getElementById('btnGasto');
-  btn.disabled = true; btn.textContent = 'Guardando...';
-  sync('loading', 'guardando...');
-  const { error } = await db.from('gastos').insert(gasto);
-  btn.disabled = false; btn.textContent = 'Guardar gasto';
-
-  if (error) { toast('Error: ' + error.message, 'err'); sync('error', 'error'); return; }
-  sync('ok', 'sincronizado');
-  await cargarGastos();
-  limpiarGasto();
-  renderGastosTabs();
-  renderTablaGastos(CUR.gastos);
-  toast('✓ Gasto guardado', 'ok');
-}
-
-function limpiarGasto() {
-  ['g-desc','g-monto','g-obs','g-resp'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('g-categoria').value = '';
-  document.getElementById('g-fp').value = '';
-  document.getElementById('g-fecha').value = today();
-}
-
-async function eliminarGasto(id) {
-  if (!confirm('¿Eliminar este gasto?')) return;
-  const { error } = await db.from('gastos').delete().eq('id', id);
-  if (error) { toast('Error al eliminar', 'err'); return; }
-  await cargarGastos();
-  renderTablaGastos(CUR.gastos);
-  toast('Gasto eliminado');
-}
-
-function renderGastosTabs() {
-  const allMeses = getAllMeses();
-  const c = document.getElementById('gastos-tabs');
-  if (!allMeses.length) { c.innerHTML = ''; CUR.gastos = null; return; }
-  // Si el mes actual no está en la lista (ej. tras borrar todos los gastos de ese mes), resetear
-  if (!CUR.gastos || !allMeses.includes(CUR.gastos)) CUR.gastos = allMeses[allMeses.length-1];
-  c.innerHTML = allMeses.map(m => {
-    const [y,mo] = m.split('-');
-    return `<button class="mes-tab ${m===CUR.gastos?'active':''}" onclick="renderTablaGastos('${m}')">${MESES[parseInt(mo)-1]} ${y}</button>`;
-  }).join('');
-}
-
-function renderTablaGastos(mes) {
-  if (mes) CUR.gastos = mes;
-  if (!CUR.gastos) {
-    const tb = document.getElementById('tbody-gastos');
-    if (tb) tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">Sin gastos registrados</td></tr>';
-    return;
-  }
-  const data  = GASTOS.filter(g => mesKey(g.fecha) === CUR.gastos).sort((a,b) => a.fecha.localeCompare(b.fecha));
-  const total = data.reduce((s,g) => s+g.monto, 0);
-  const tb    = document.getElementById('tbody-gastos');
-  if (!data.length) {
-    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">Sin gastos este mes</td></tr>';
-    return;
-  }
-  tb.innerHTML = data.map(g =>
-    `<tr>
-      <td>${fmtD(g.fecha)}</td>
-      <td><span class="badge" style="background:${CAT_COLORS[g.categoria]||'var(--muted)'}22;color:${CAT_COLORS[g.categoria]||'var(--muted)'}">${g.categoria}</span></td>
-      <td>${g.descripcion||'—'}</td>
-      <td class="td-num" style="color:var(--accent3)">$${fmt(g.monto)}</td>
-      <td>${g.fp||'—'}</td>
-      <td>${g.responsable||'—'}</td>
-      <td style="font-size:0.68rem;color:var(--muted)">${g.obs||''}</td>
-      <td><button class="btn btn-danger" onclick="eliminarGasto(${g.id})">✕</button></td>
-    </tr>`
-  ).join('') +
-  `<tr style="background:var(--surface2);font-weight:800">
-    <td colspan="3">TOTAL GASTOS</td>
-    <td class="td-num" style="color:var(--accent3)">$${fmt(total)}</td>
-    <td colspan="4"></td>
-  </tr>`;
-}
-
-// ══════════════════════════════════════════════════
-// CONFIG
-// ══════════════════════════════════════════════════
-function loadCfgUI() {
-  // Impuestos
-  document.getElementById('cfg-iva').value = CFG.tasaIVA ?? '21.0';
-  document.getElementById('cfg-iibb').value = CFG.tasaIIBB ?? '3.5';
-
-  const pt = CFG.point   || {};
-  const fi = CFG.fiserv  || {};
-  const nar = CFG.naranja || {};
-  const sol = CFG.sol    || {};
-  const sc  = CFG.sucredito || {};
-
-  // MP Point
-  document.getElementById('pt-deb').value        = pt.deb        ?? '';
-  document.getElementById('pt-qr').value         = pt.qr         ?? '';
-  document.getElementById('pt-cred1-banc').value  = pt.cred1Banc  ?? '';
-  document.getElementById('pt-cred1-nobanc').value = pt.cred1NoBanc ?? '';
-  document.getElementById('pt-c2').value          = pt.c2         ?? '';
-  document.getElementById('pt-c3').value          = pt.c3         ?? '';
-  document.getElementById('pt-c6').value          = pt.c6         ?? '';
-  document.getElementById('pt-c9').value          = pt.c9         ?? '';
-  document.getElementById('pt-c12').value         = pt.c12        ?? '';
-
-  // FISERV base
-  document.getElementById('fiserv-deb').value    = fi.deb   ?? '';
-  document.getElementById('fiserv-qr').value     = fi.qr    ?? '';
-  document.getElementById('fiserv-banc').value   = fi.banc  ?? '';
-  document.getElementById('fiserv-nobanc').value = fi.nobanc ?? '';
-
-  // Naranja
-  document.getElementById('nar-c1').value = nar.c1 ?? '';
-  document.getElementById('nar-c3').value = nar.c3 ?? '';
-  document.getElementById('nar-c5').value = nar.c5 ?? '';
-
-  // SOL
-  document.getElementById('sol-c1').value = sol.c1 ?? '';
-  document.getElementById('sol-c3').value = sol.c3 ?? '';
-
-  // Sucredito
-  document.getElementById('suc-c1').value = sc.c1 ?? '';
-  document.getElementById('suc-c3').value = sc.c3 ?? '';
-
-  document.getElementById('trans-tasa').value = CFG.transTasa ?? '';
-  renderVlist();
-}
-
-async function guardarConfig() {
-  const pinRaw = document.getElementById('pin-nuevo').value.trim();
-  const g = (id) => parseFloat(document.getElementById(id).value) || 0;
-
-  CFG = {
-    tasaIVA: g('cfg-iva'),
-    tasaIIBB: g('cfg-iibb'),
-    point: {
-      deb: g('pt-deb'), qr: g('pt-qr'),
-      cred1Banc: g('pt-cred1-banc'), cred1NoBanc: g('pt-cred1-nobanc'),
-      c2: g('pt-c2'), c3: g('pt-c3'), c6: g('pt-c6'), c9: g('pt-c9'), c12: g('pt-c12')
-    },
-    fiserv: {
-      deb: g('fiserv-deb'), qr: g('fiserv-qr'),
-      banc: g('fiserv-banc'), nobanc: g('fiserv-nobanc')
-    },
-    naranja:   { c1: g('nar-c1'), c3: g('nar-c3'), c5: g('nar-c5') },
-    sol:       { c1: g('sol-c1'), c3: g('sol-c3') },
-    sucredito: { c1: g('suc-c1'), c3: g('suc-c3') },
-    transTasa: g('trans-tasa'),
-    vendedores: CFG.vendedores,
-    pinHash: pinRaw.length === 4 ? simpleHash(pinRaw) : CFG.pinHash
-  };
-
-  await db.from('configuracion').upsert({ id: 1, data: CFG });
-  fillVendedores();
-  document.getElementById('pin-nuevo').value = '';
-  toast('✓ Configuración guardada', 'ok');
-}
-
-function renderVlist() {
-  document.getElementById('vlist').innerHTML = CFG.vendedores.map((v,i) =>
-    `<div class="vchip">${v}<button onclick="delVendedor(${i})" title="Eliminar">✕</button></div>`
-  ).join('');
-}
-
-function agregarVendedor() {
-  const n = document.getElementById('nuevo-v').value.trim();
-  if (!n || CFG.vendedores.includes(n)) return;
-  CFG.vendedores.push(n);
-  renderVlist();
-  fillVendedores();
-  document.getElementById('nuevo-v').value = '';
-}
-
-function delVendedor(i) {
-  if (!confirm('¿Eliminar vendedor ' + CFG.vendedores[i] + '?')) return;
-  CFG.vendedores.splice(i, 1);
-  renderVlist();
-  fillVendedores();
-}
-
-function fillVendedores() {
-  const s = document.getElementById('f-vendedor');
-  const cur = s.value;
-  s.innerHTML = '<option value="">— seleccionar —</option>' +
-    CFG.vendedores.map(v => `<option ${v===cur?'selected':''}>${v}</option>`).join('');
-}
-
-// ══════════════════════════════════════════════════
-// APERTURA DE CAJA — helpers
-// ══════════════════════════════════════════════════
-
-async function eliminarApertura(id) {
-  if (!confirm('¿Eliminar esta apertura?')) return;
-  const { error } = await db.from('aperturas').delete().eq('id', id);
-  if (error) { toast('Error al eliminar', 'err'); return; }
-  await cargarAperturas();
-  renderAperturaView();
-  renderBannerApertura(today());
-  toast('Apertura eliminada');
-}
-
-function renderAperturaView() {
-  const hoy = today();
-  const apHoy = APERTURAS.find(a => a.fecha === hoy);
-
-  // Precargar campos del formulario
-  const apFecha = document.getElementById('ap-fecha');
-  if (apFecha && !apFecha.value) apFecha.value = hoy;
-  actualizarLabelFechaApertura();
-
-  // Fill vendedores
-  const apV = document.getElementById('ap-vendedor');
-  if (apV) {
-    apV.innerHTML = '<option value="">— seleccionar —</option>' +
-      CFG.vendedores.map(v => `<option>${v}</option>`).join('');
-  }
-
-  // Mostrar/ocultar formulario según si ya hay apertura hoy
-  const formCard = document.getElementById('apertura-form-card');
-  if (formCard) {
-    if (apHoy) {
-      formCard.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;padding:4px 0">
-          <div style="width:10px;height:10px;border-radius:50%;background:var(--success);box-shadow:0 0 10px rgba(61,255,160,0.6);flex-shrink:0"></div>
-          <div>
-            <div style="font-weight:900;color:var(--success);font-size:0.95rem">
-              Caja ya abierta — ${new Date(hoy+'T12:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'})}
-            </div>
-            <div style="font-size:0.75rem;color:var(--muted);margin-top:3px">
-              Fondo inicial: <strong>$${fmt(apHoy.efectivo_inicial)}</strong>
-              ${apHoy.vendedor ? ` · Abrió: <strong>${apHoy.vendedor}</strong>` : ''}
-              ${apHoy.cerrada ? ' · <span style="color:var(--warn)">Cerrada</span>' : ''}
-            </div>
-          </div>
-          <button class="btn btn-ghost" style="margin-left:auto;font-size:0.7rem;padding:5px 12px"
-            onclick="showView('carga', document.querySelector('.nav-btn[onclick*=carga]'))">
-            → Ir a caja
-          </button>
-        </div>`;
-    } else {
-      // restaurar formulario si fue reemplazado
-      if (!document.getElementById('ap-fecha')) {
-        formCard.innerHTML = `
-          <div class="card-title">🟢 Apertura de caja — <span id="apertura-fecha-label"></span></div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>📅 Fecha de apertura</label>
-              <input type="date" id="ap-fecha" oninput="actualizarLabelFechaApertura()">
-              <div class="field-hint" id="ap-fecha-hint"></div>
-            </div>
-            <div class="form-group"><label>Efectivo inicial ($)</label><input type="number" id="ap-monto" placeholder="ej: 10000" min="0"></div>
-            <div class="form-group"><label>Quién abre</label><select id="ap-vendedor"><option value="">— seleccionar —</option></select></div>
-            <div class="form-group full"><label>Observación (opcional)</label><input type="text" id="ap-obs" placeholder="ej: Fondo completo..."></div>
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-success" onclick="guardarApertura()">✓ Abrir caja</button>
-          </div>`;
-        const apFecha2 = document.getElementById('ap-fecha');
-        if (apFecha2) apFecha2.value = hoy;
-        actualizarLabelFechaApertura();
-        const apV2 = document.getElementById('ap-vendedor');
-        if (apV2) apV2.innerHTML = '<option value="">— seleccionar —</option>' +
-          CFG.vendedores.map(v => `<option>${v}</option>`).join('');
-      }
-    }
-  }
-
-  renderCajasPendientes();
-}
-
-function renderCajasPendientes(destacar) {
-  const pendientes = getCajasPendientes();
-  const el = document.getElementById('cajas-sin-cerrar-contenido');
-  if (!el) return;
-
-  if (!pendientes.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">No hay cajas pendientes</div><div class="empty-sub">Todas las cajas de días anteriores están cerradas</div></div>`;
-    return;
-  }
-
-  el.innerHTML = pendientes.map(ap => {
-    const regs = REG.filter(r => r.fecha === ap.fecha);
-    const tB = regs.reduce((s,r)=>s+r.total,0);
-    const tN = regs.reduce((s,r)=>s+r.neto,0);
-    const efv = regs.filter(r=>r.fp==='Efectivo').reduce((s,r)=>s+r.total,0);
-    const eg  = regs.reduce((s,r)=>s+r.egreso,0);
-    const esperado = ap.efectivo_inicial + efv - eg;
-
-    const ventasRows = regs.length ? regs.map(r => `
-      <tr>
-        <td>${r.nombre}</td>
-        <td>${r.producto||'—'}</td>
-        <td class="td-num">$${fmt(r.total)}</td>
-        <td>${badgeFP(r.fp, r.subtarjeta)}</td>
-        <td class="td-num" style="color:var(--success);font-weight:900">$${fmt(r.neto)}</td>
-        <td>${r.vendedor||'—'}</td>
-        <td class="td-num" style="color:var(--accent3)">${r.egreso?'-$'+fmt(r.egreso):'—'}</td>
-        <td><button class="btn btn-danger" onclick="eliminarRegPendiente(${r.id},'${ap.fecha}')">✕</button></td>
-      </tr>`).join('') :
-      `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Sin ventas registradas</td></tr>`;
-
-    const vendedoresOpts = '<option value="">— seleccionar —</option>' + CFG.vendedores.map(v=>`<option>${v}</option>`).join('');
-
-    return `<div class="card" style="border-left:3px solid var(--warn)" id="card-pend-${ap.id}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-weight:900;font-size:1rem;color:var(--warn)">${fmtD(ap.fecha)} <span style="font-size:0.7rem;color:var(--muted);font-weight:600">· Sin cerrar</span></div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-top:2px">Fondo inicial: $${fmt(ap.efectivo_inicial)} · Abrió: ${ap.vendedor||'—'} · <span id="pend-count-${ap.id}">${regs.length}</span> venta${regs.length!==1?'s':''}</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span style="font-weight:900;font-family:var(--mono);color:var(--success)" id="pend-neto-${ap.id}">$${fmt(tN)}</span>
-          <span style="font-size:0.68rem;color:var(--muted)">neto</span>
-        </div>
-      </div>
-
-      <div class="table-wrap" style="margin-bottom:16px">
-        <table id="pend-tabla-${ap.id}">
-          <thead><tr><th>Cliente</th><th>Producto</th><th>Bruto</th><th>F.Pago</th><th style="color:var(--success)">Neto</th><th>Vendedor</th><th>Egreso</th><th></th></tr></thead>
-          <tbody id="pend-tbody-${ap.id}">${ventasRows}</tbody>
-        </table>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <button class="btn btn-secondary" style="font-size:0.72rem;padding:8px 16px" onclick="toggleFormPendiente('${ap.id}','${ap.fecha}')">
-          ➕ Agregar venta a este día
-        </button>
-      </div>
-
-      <div id="form-pend-${ap.id}" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:18px;margin-bottom:16px">
-        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-weight:800;margin-bottom:14px">✎ Nueva venta para ${fmtD(ap.fecha)}</div>
-        <div class="form-grid">
-          <div class="form-group"><label>Cliente</label><input type="text" id="pf-nombre-${ap.id}" placeholder="nombre del cliente"></div>
-          <div class="form-group"><label>N° de Orden</label><input type="text" id="pf-orden-${ap.id}" placeholder="ej: 1007"></div>
-          <div class="form-group">
-            <label>Producto</label>
-            <select id="pf-producto-${ap.id}">
-              <option value="">— seleccionar —</option>
-              <option>Recetado</option><option>Sol</option><option>Lentes</option>
-              <option>Taller</option><option>Liquidos</option><option>Accesorio</option>
-              <option>Saldo</option><option>PAMI</option><option>Pase</option><option>Egreso</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Total cobrado ($)</label><input type="number" id="pf-total-${ap.id}" placeholder="0" oninput="updateTasaPreviewPend('${ap.id}')"></div>
-          <div class="form-group"><label>A cuenta ($)</label><input type="number" id="pf-acuenta-${ap.id}" placeholder="0"></div>
-          <div class="form-group"><label>Saldo pendiente ($)</label><input type="number" id="pf-saldo-${ap.id}" placeholder="0"></div>
-          <div class="form-group">
-            <label>Terminal</label>
-            <select id="pf-terminal-${ap.id}" onchange="onTerminalChangePend('${ap.id}')">
-              <option value="">— seleccionar —</option>
-              <option value="point">MP Point</option>
-              <option value="fiserv">Clover / FISERV</option>
-              <option value="efectivo">Efectivo / Transf.</option>
-            </select>
-          </div>
-          <div class="form-group" id="pf-subtarjeta-group-${ap.id}" style="display:none">
-            <label>Tarjeta / Red</label>
-            <select id="pf-subtarjeta-${ap.id}" onchange="onSubtarjetaChangePend('${ap.id}')">
-              <option value="">— seleccionar —</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Forma de pago</label>
-            <select id="pf-fp-${ap.id}" onchange="onFPChangePend('${ap.id}')" disabled>
-              <option value="">— elegí terminal primero —</option>
-            </select>
-          </div>
-          <div class="form-group" id="pf-cuotas-group-${ap.id}" style="display:none">
-            <label>Cuotas</label>
-            <select id="pf-cuotas-${ap.id}" onchange="updateTasaPreviewPend('${ap.id}')">
-              <option value="1">1 pago</option><option value="2">2 cuotas</option>
-              <option value="3">3 cuotas</option><option value="5">5 cuotas</option>
-              <option value="6">6 cuotas</option>
-              <option value="9">9 cuotas</option><option value="12">12 cuotas</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label style="opacity:0">-</label>
-            <div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
-              <div class="tasa-preview" id="pf-tasa-preview-${ap.id}" style="min-height:0">Seleccioná terminal y forma de pago</div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Vendedor</label>
-            <select id="pf-vendedor-${ap.id}">${vendedoresOpts}</select>
-          </div>
-          <div class="form-group"><label>Egreso caja chica ($)</label><input type="number" id="pf-egreso-${ap.id}" placeholder="0"></div>
-          <div class="form-group full"><label>Observaciones</label><input type="text" id="pf-obs-${ap.id}" placeholder="notas libres..."></div>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="pf-btn-guardar-${ap.id}" onclick="guardarRegistroPendiente('${ap.id}','${ap.fecha}')">Guardar venta</button>
-          <button class="btn btn-ghost" onclick="limpiarFormPendiente('${ap.id}')">Limpiar</button>
-          <button class="btn btn-ghost" onclick="toggleFormPendiente('${ap.id}','${ap.fecha}')">Cancelar</button>
-        </div>
-      </div>
-
-      <div class="cierre-panel" style="margin-bottom:14px" id="pend-cierre-${ap.id}">
-        <div class="cierre-row"><span class="cr-label">Total bruto ventas</span><span class="cr-val" id="pend-bruto-${ap.id}">$${fmt(tB)}</span></div>
-        <div class="cierre-row"><span class="cr-label">Neto real (post tasas)</span><span class="cr-val" style="color:var(--success)" id="pend-neto2-${ap.id}">$${fmt(tN)}</span></div>
-        <div class="cierre-row"><span class="cr-label">Efectivo en ventas</span><span class="cr-val" id="pend-efv-${ap.id}">$${fmt(efv)}</span></div>
-        <div class="cierre-row"><span class="cr-label">Egresos caja chica</span><span class="cr-val" style="color:var(--accent3)" id="pend-eg-${ap.id}">-$${fmt(eg)}</span></div>
-        <div class="cierre-row total"><span class="cr-label">Efectivo esperado</span><span class="cr-val" style="color:var(--info)" id="pend-esp-${ap.id}">$${fmt(esperado)}</span></div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Efectivo contado al cierre ($)</label>
-          <input type="number" id="contado-pend-${ap.id}" placeholder="0" min="0" oninput="calcDifPend(${ap.id},${esperado})">
-          <div class="field-hint" id="dif-pend-${ap.id}"></div>
-        </div>
-        <div style="display:flex;align-items:flex-end;padding-bottom:2px">
-          <button class="btn btn-danger" style="padding:10px 18px" onclick="cerrarCajaPendiente(${ap.id},'${ap.fecha}')">🔒 Cerrar esta caja</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function toggleFormPendiente(apId, fecha) {
-  const form = document.getElementById(`form-pend-${apId}`);
-  if (!form) return;
-  const visible = form.style.display !== 'none';
-  form.style.display = visible ? 'none' : 'block';
-  if (!visible) {
-    // Focus en el campo cliente al abrir
-    setTimeout(() => document.getElementById(`pf-nombre-${apId}`)?.focus(), 50);
-  }
-}
-
-function limpiarFormPendiente(apId) {
-  ['pf-nombre-','pf-orden-','pf-total-','pf-acuenta-','pf-saldo-','pf-obs-','pf-egreso-'].forEach(pre => {
-    const el = document.getElementById(pre + apId); if (el) el.value = '';
-  });
-  const term = document.getElementById(`pf-terminal-${apId}`); if (term) term.value = '';
-  const fp   = document.getElementById(`pf-fp-${apId}`);
-  if (fp) { fp.value = ''; fp.disabled = true; fp.innerHTML = '<option value="">— elegí terminal primero —</option>'; }
-  const st   = document.getElementById(`pf-subtarjeta-${apId}`); if (st) st.value = '';
-  document.getElementById(`pf-subtarjeta-group-${apId}`)?.style && (document.getElementById(`pf-subtarjeta-group-${apId}`).style.display = 'none');
-  document.getElementById(`pf-cuotas-group-${apId}`)?.style && (document.getElementById(`pf-cuotas-group-${apId}`).style.display = 'none');
-  const pv = document.getElementById(`pf-tasa-preview-${apId}`); if (pv) { pv.textContent = 'Seleccioná terminal y forma de pago'; pv.style.color=''; }
-  const ven = document.getElementById(`pf-vendedor-${apId}`); if (ven) ven.value = '';
-  const cuotas = document.getElementById(`pf-cuotas-${apId}`); if (cuotas) cuotas.value = '1';
-}
-
-function onTerminalChangePend(apId) {
-  const terminal = document.getElementById(`pf-terminal-${apId}`)?.value || '';
-  const fpSel    = document.getElementById(`pf-fp-${apId}`);
-  const stGrp    = document.getElementById(`pf-subtarjeta-group-${apId}`);
-  const stSel    = document.getElementById(`pf-subtarjeta-${apId}`);
-  const cuGrp    = document.getElementById(`pf-cuotas-group-${apId}`);
-
-  if (!fpSel) return;
-  fpSel.disabled = false;
-
-  if (terminal === 'point') {
-    fpSel.innerHTML = `<option value="">— seleccionar —</option>
-      <option value="Debito">Débito</option><option value="QR">QR</option><option value="Cred Bancario">Cred Bancario</option><option value="Cred No Bancario">Cred No Bancario</option>
-      <option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option>`;
-    if (stGrp) stGrp.style.display = 'none';
-    if (cuGrp) cuGrp.style.display = 'none';
-  } else if (terminal === 'fiserv') {
-    fpSel.innerHTML = `<option value="">— seleccionar —</option>
-      <option value="Debito">Débito</option><option value="QR">QR</option><option value="Cred Bancario">Cred Bancario</option><option value="Cred No Bancario">Cred No Bancario</option>
-      <option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option>`;
-    if (stGrp) { stGrp.style.display = 'flex'; }
-    if (stSel) {
-      stSel.innerHTML = `<option value="">— sin subtarjeta —</option>
-        <option value="naranja">Naranja X</option><option value="sol">Sol</option>
-        <option value="sucredito">Sucredito</option><option value="fiserv-base">FISERV base</option>`;
-    }
-    if (cuGrp) cuGrp.style.display = 'none';
-  } else if (terminal === 'efectivo') {
-    fpSel.innerHTML = `<option value="">— seleccionar —</option>
-      <option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option>`;
-    if (stGrp) stGrp.style.display = 'none';
-    if (cuGrp) cuGrp.style.display = 'none';
-  }
-  updateTasaPreviewPend(apId);
-}
-
-function onSubtarjetaChangePend(apId) {
-  updateTasaPreviewPend(apId);
-}
-
-function onFPChangePend(apId) {
-  const terminal   = document.getElementById(`pf-terminal-${apId}`)?.value || '';
-  const fp         = document.getElementById(`pf-fp-${apId}`)?.value || '';
-  const cuGrp      = document.getElementById(`pf-cuotas-group-${apId}`);
-  const cuSel      = document.getElementById(`pf-cuotas-${apId}`);
-
-  // MP Point: mostrar cuotas cuando se elige crédito
-  if (terminal === 'point' && (fp === 'Cred Bancario' || fp === 'Cred No Bancario')) {
-    if (cuSel) cuSel.innerHTML = `
-      <option value="1">1 pago</option>
-      <option value="2">2 cuotas</option>
-      <option value="3">3 cuotas</option>
-      <option value="6">6 cuotas</option>
-      <option value="9">9 cuotas</option>
-      <option value="12">12 cuotas</option>`;
-    if (cuGrp) cuGrp.style.display = 'flex';
-  } else if (terminal === 'point') {
-    if (cuGrp) cuGrp.style.display = 'none';
-  }
-  // Para fiserv las cuotas se manejan en onSubtarjetaChangePend (via onTerminalChangePend)
-  updateTasaPreviewPend(apId);
-}
-
-function updateTasaPreviewPend(apId) {
-  const terminal   = document.getElementById(`pf-terminal-${apId}`)?.value || '';
-  const subtarjeta = document.getElementById(`pf-subtarjeta-${apId}`)?.value || '';
-  const fp         = document.getElementById(`pf-fp-${apId}`)?.value || '';
-  const cuotas     = parseInt(document.getElementById(`pf-cuotas-${apId}`)?.value || '1');
-  const total      = parseFloat(document.getElementById(`pf-total-${apId}`)?.value) || 0;
-  const p          = document.getElementById(`pf-tasa-preview-${apId}`);
-  if (!p) return;
-
-  if (!terminal || !fp) { p.textContent = 'Seleccioná terminal y forma de pago'; p.style.color=''; return; }
-  if (fp === 'Efectivo') { p.textContent = '✓ Sin descuento — Efectivo'; p.style.color='var(--success)'; return; }
-
-  const stKey = (subtarjeta === 'fiserv-base') ? '' : subtarjeta;
-  const res   = calcularFinanciero(total, terminal, stKey, fp, cuotas);
-
-  if (!res.tasaEfectiva && fp !== 'Transferencia') { p.textContent = '⚠ Tasa no configurada — ir a Config'; p.style.color='var(--warn)'; return; }
-  
-  const termLabel = terminal==='point' ? 'MP Point' : terminal === 'fiserv' ? 'Clover/FISERV' : 'Banco';
-  const stLabel   = stKey ? ` · ${stKey.charAt(0).toUpperCase()+stKey.slice(1)}` : '';
-  const cLabel    = cuotas>1 ? ` · ${cuotas}c` : '';
-  
-  if (fp === 'Transferencia') {
-    p.textContent = res.tasaEfectiva > 0 ? `Tasa ${res.tasaEfectiva}% → desc $${fmt(res.desc)} → neto $${fmt(res.neto)}` : '✓ Sin descuento — Transferencia';
-    p.style.color = res.tasaEfectiva > 0 ? 'var(--warn)' : 'var(--success)'; return;
-  }
-
-  p.textContent = `${termLabel}${stLabel}${cLabel} · Costo total desc $${fmt(res.desc)} → Neto $${fmt(res.neto)}`;
-  p.style.color = 'var(--info)';
-}
-
-async function guardarRegistroPendiente(apId, fecha) {
-  const terminal   = document.getElementById(`pf-terminal-${apId}`)?.value || '';
-  const subtarjeta = document.getElementById(`pf-subtarjeta-${apId}`)?.value || '';
-  const fp         = document.getElementById(`pf-fp-${apId}`)?.value || '';
-  const cuotas     = parseInt(document.getElementById(`pf-cuotas-${apId}`)?.value || '1');
-  const total      = parseFloat(document.getElementById(`pf-total-${apId}`)?.value) || 0;
-
-  if (!total) { toast('⚠ Ingresá el monto de la venta', 'err'); return; }
-  if (!fp)    { toast('⚠ Seleccioná forma de pago', 'err'); return; }
-
-  const stKey = (subtarjeta === 'fiserv-base') ? '' : subtarjeta;
-  const resFinanciero = calcularFinanciero(total, terminal, stKey, fp, cuotas);
-  const tasa = resFinanciero.tasaEfectiva;
-  const neto = resFinanciero.neto;
-
-  let fpLabel = fp;
-  if ((fp === 'Cred Bancario' || fp === 'Cred No Bancario' || fp === 'T Credito') && cuotas > 1) {
-    fpLabel = `${fp} ${cuotas}c`;
-  }
-  const subtarjetaLabel = stKey || (subtarjeta === 'fiserv-base' ? 'FISERV' : '');
-
-  const reg = {
-    fecha,
-    nombre:    document.getElementById(`pf-nombre-${apId}`)?.value.trim() || 'cliente',
-    orden:     document.getElementById(`pf-orden-${apId}`)?.value.trim() || null,
-    producto:  document.getElementById(`pf-producto-${apId}`)?.value || '',
-    total, fp: fpLabel, terminal,
-    subtarjeta: subtarjetaLabel,
-    cuotas,
-    acuenta:   parseFloat(document.getElementById(`pf-acuenta-${apId}`)?.value) || 0,
-    saldo:     parseFloat(document.getElementById(`pf-saldo-${apId}`)?.value)   || 0,
-    obs:       document.getElementById(`pf-obs-${apId}`)?.value.trim() || '',
-    egreso:    parseFloat(document.getElementById(`pf-egreso-${apId}`)?.value)  || 0,
-    vendedor:  document.getElementById(`pf-vendedor-${apId}`)?.value || '',
-    tasa, neto,
-    costo_total: 0, margen: null, margen_pct: null
-  };
-
-  const btn = document.getElementById(`pf-btn-guardar-${apId}`);
-  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
-  sync('loading', 'guardando...');
-
-  let { error } = await db.from('registros').insert(reg);
-  if (error && error.message && error.message.includes('column')) {
-    const regBase = { fecha, nombre: reg.nombre, orden: reg.orden, producto: reg.producto,
-      total, fp: fpLabel, terminal, acuenta: reg.acuenta, saldo: reg.saldo, obs: reg.obs,
-      egreso: reg.egreso, vendedor: reg.vendedor, tasa, neto };
-    const res2 = await db.from('registros').insert(regBase);
-    error = res2.error;
-  }
-
-  if (btn) { btn.disabled = false; btn.textContent = 'Guardar venta'; }
-
-  if (error) { toast('Error: ' + error.message, 'err'); sync('error','error'); return; }
-  sync('ok','sincronizado');
-  await cargarReg();
-  limpiarFormPendiente(apId);
-
-  // Actualizar tabla y totales sin re-renderizar todo
-  const regsActualizados = REG.filter(r => r.fecha === fecha);
-  const tB2 = regsActualizados.reduce((s,r)=>s+r.total,0);
-  const tN2 = regsActualizados.reduce((s,r)=>s+r.neto,0);
-  const efv2 = regsActualizados.filter(r=>r.fp==='Efectivo').reduce((s,r)=>s+r.total,0);
-  const eg2  = regsActualizados.reduce((s,r)=>s+r.egreso,0);
-  const ap   = APERTURAS.find(a => a.id === parseInt(apId));
-  const esperado2 = (ap?.efectivo_inicial||0) + efv2 - eg2;
-
-  // Actualizar tabla de ventas
-  const tbody = document.getElementById(`pend-tbody-${apId}`);
-  if (tbody) {
-    tbody.innerHTML = regsActualizados.map(r => {
-      const stLabel = r.subtarjeta ? ` <small style="color:var(--muted);font-size:0.62rem">(${r.subtarjeta})</small>` : '';
-      return `<tr>
-        <td>${r.nombre}</td>
-        <td>${r.producto||'—'}</td>
-        <td class="td-num">$${fmt(r.total)}</td>
-        <td>${badgeFP(r.fp, r.subtarjeta)}${stLabel}</td>
-        <td class="td-num" style="color:var(--success);font-weight:900">$${fmt(r.neto)}</td>
-        <td>${r.vendedor||'—'}</td>
-        <td class="td-num" style="color:var(--accent3)">${r.egreso?'-$'+fmt(r.egreso):'—'}</td>
-        <td><button class="btn btn-danger" onclick="eliminarRegPendiente(${r.id},'${fecha}')">✕</button></td>
-      </tr>`;
-    }).join('');
-  }
-
-  // Actualizar totales en resumen
-  const updEl = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-  updEl(`pend-neto-${apId}`,  `$${fmt(tN2)}`);
-  updEl(`pend-bruto-${apId}`, `$${fmt(tB2)}`);
-  updEl(`pend-neto2-${apId}`, `$${fmt(tN2)}`);
-  updEl(`pend-efv-${apId}`,   `$${fmt(efv2)}`);
-  updEl(`pend-eg-${apId}`,    `-$${fmt(eg2)}`);
-  updEl(`pend-esp-${apId}`,   `$${fmt(esperado2)}`);
-  // Actualizar input cierre con nuevo esperado
-  const inputContado = document.getElementById(`contado-pend-${apId}`);
-  if (inputContado) inputContado.setAttribute('oninput', `calcDifPend(${apId},${esperado2})`);
-
-  toast(`✓ Venta agregada al ${fmtD(fecha)}`, 'ok');
-}
-
-async function eliminarRegPendiente(id, fecha) {
-  if (!confirm('¿Eliminar este registro?')) return;
-  const { error } = await db.from('registros').delete().eq('id', id);
-  if (error) { toast('Error al eliminar', 'err'); return; }
-  await cargarReg();
-  // Re-renderizar cajas pendientes para reflejar el cambio
-  renderCajasPendientes();
-  toast('Registro eliminado');
-}
-
-function calcDifPend(id, esperado) {
-  const contado = parseFloat(document.getElementById(`contado-pend-${id}`)?.value);
-  const hint = document.getElementById(`dif-pend-${id}`);
-  if (!hint || isNaN(contado)) return;
-  const dif = contado - esperado;
-  const cls = Math.abs(dif)<=500 ? 'ok' : dif>0 ? 'warn' : 'err';
-  hint.className = `field-hint ${cls}`;
-  hint.textContent = `${dif>=0?'+':''}$${fmt(dif)} vs esperado $${fmt(esperado)}`;
-}
-
-function renderBannerApertura() {} // no-op, ya no se usa
-
-// ══════════════════════════════════════════════════
-// CORREGIR FECHA DE APERTURA (después de haber abierto)
-// ══════════════════════════════════════════════════
-function mostrarCorregirFecha(id, fechaActual) {
-  const panel = document.getElementById('panel-corregir-fecha');
-  if (!panel) return;
-
-  if (panel.style.display !== 'none') {
-    panel.style.display = 'none';
-    panel.innerHTML = '';
-    return;
-  }
-
-  panel.style.display = 'block';
-  panel.innerHTML = `
-    <div style="background:rgba(249,244,171,0.06);border:1px solid rgba(249,244,171,0.2);border-radius:12px;padding:14px 18px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:160px">
-        <label style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--accent);font-weight:700;display:block;margin-bottom:5px">✏ Corregir fecha de apertura</label>
-        <input type="date" id="input-corregir-fecha" value="${fechaActual}" max="${today()}"
-          style="background:var(--surface2);border:1px solid rgba(249,244,171,0.3);border-radius:10px;color:var(--text);font-family:var(--font);font-size:0.875rem;font-weight:600;padding:9px 13px;width:100%;outline:none">
-        <div style="font-size:0.62rem;color:var(--muted);margin-top:4px">Fecha actual: <strong style="color:var(--accent)">${fmtD(fechaActual)}</strong></div>
-      </div>
-      <div style="display:flex;gap:8px;padding-bottom:2px">
-        <button class="btn btn-primary" style="padding:9px 16px;font-size:0.72rem" onclick="aplicarCorreccionFecha(${id})">✓ Guardar</button>
-        <button class="btn btn-ghost" style="padding:9px 14px;font-size:0.72rem" onclick="document.getElementById('panel-corregir-fecha').style.display='none'">Cancelar</button>
-      </div>
-    </div>`;
-}
-
-async function aplicarCorreccionFecha(id) {
-  const nuevaFecha = document.getElementById('input-corregir-fecha')?.value;
-  if (!nuevaFecha) { toast('⚠ Seleccioná una fecha', 'err'); return; }
-  if (nuevaFecha > today()) { toast('✗ No se puede poner fecha futura', 'err'); return; }
-
-  // Verificar que no haya otra apertura en esa fecha
-  const yaExiste = APERTURAS.find(a => a.fecha === nuevaFecha && a.id !== id);
-  if (yaExiste) { toast(`⚠ Ya existe una apertura para ${fmtD(nuevaFecha)}`, 'err'); return; }
-
-  if (!confirm(`¿Cambiar la fecha de esta apertura a ${fmtD(nuevaFecha)}?\n\nTambién se actualizarán todos los registros de ventas asociados.`)) return;
-
-  // 1. Actualizar la apertura
-  const { error: errAp } = await db.from('aperturas').update({ fecha: nuevaFecha }).eq('id', id);
-  if (errAp) { toast('Error al actualizar apertura: ' + errAp.message, 'err'); return; }
-
-  // 2. Actualizar los registros de ventas que tenían la fecha vieja (solo los de hoy, ya que es caja recién abierta)
-  const fechaVieja = APERTURAS.find(a => a.id === id)?.fecha || today();
-  const regsAfectados = REG.filter(r => r.fecha === fechaVieja);
-  if (regsAfectados.length > 0) {
-    const ids = regsAfectados.map(r => r.id);
-    const { error: errReg } = await db.from('registros').update({ fecha: nuevaFecha }).in('id', ids);
-    if (errReg) { toast('Apertura actualizada, pero error en registros: ' + errReg.message, 'err'); }
-  }
-
-  await Promise.all([cargarAperturas(), cargarReg()]);
-  CAJA_HOY = getCajaAbierta();
-  renderCajaView();
-  toast(`✓ Fecha corregida a ${fmtD(nuevaFecha)}`, 'ok');
-}
-
-// ══════════════════════════════════════════════════
-// ══════════════════════════════════════════════════
-// EXPORTAR (ÚNICO)
-// ══════════════════════════════════════════════════
-function exportarCSV() {
-  const mes = CUR.reporte;
-  if (!mes) return;
-  const data = REG.filter(r => mesKey(r.fecha) === mes).sort((a,b) => a.fecha.localeCompare(b.fecha));
-  const h = ['Fecha','Cliente','Orden','Producto','Terminal','Subtarjeta','Forma Pago','Total Bruto','Tasa %','Descuento','Neto Real','Costo Total','Margen $','Margen %','A Cuenta','Saldo','Vendedor','Egreso','Observaciones'];
-  const rows = data.map(r => {
-    const termLabel = r.terminal === 'point' ? 'MP Point' : r.terminal === 'fiserv' ? 'FISERV' : r.terminal || '';
-    return [
-      r.fecha, r.nombre, r.orden||'', r.producto||'',
-      termLabel, r.subtarjeta||'',
-      r.fp, r.total, r.tasa?r.tasa+'%':'0%',
-      (r.total-r.neto).toFixed(2), r.neto.toFixed(2),
-      r.costo_total||0,
-      r.margen !== null ? r.margen.toFixed(2) : '',
-      r.margen_pct !== null ? r.margen_pct.toFixed(1)+'%' : '',
-      r.acuenta||0, r.saldo||0, r.vendedor||'', r.egreso||0, r.obs||''
-    ];
-  });
-  const csv = [h,...rows].map(row => row.map(c => `"${c}"`).join(',')).join('\n');
-  const blob = new Blob(['\ufeff'+csv], { type: 'text/csv;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const [y,mo] = mes.split('-');
-  a.href = url;
-  a.download = `olvision_${MESES_F[parseInt(mo)-1].toLowerCase()}_${y}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('✓ CSV exportado', 'ok');
-}
-
-function exportarBackup() {
-  const blob = new Blob([JSON.stringify({ registros: REG, gastos: GASTOS, config: CFG, fecha: new Date().toISOString() }, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `olvision_backup_${today()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('✓ Backup descargado', 'ok');
-}
-
-// ══════════════════════════════════════════════════
-// CARGA DE DATOS
+// CARGA DE DATOS Y ARRANQUE
 // ══════════════════════════════════════════════════
 async function cargarReg() {
   const { data, error } = await db.from('registros').select('*').order('fecha', { ascending: true });
@@ -3323,23 +2446,22 @@ async function cargarAperturas() {
   try {
     const { data, error } = await db.from('aperturas').select('*').order('fecha', { ascending: false });
     if (!error && data) APERTURAS = data;
-  } catch(e) {
-    // tabla aún no creada — ignorar silenciosamente
-  }
+  } catch(e) {}
 }
 async function cargarCfg() {
   const { data, error } = await db.from('configuracion').select('*').eq('id', 1).single();
   if (!error && data?.data) {
     const saved = data.data;
     const def   = defCfg();
-    // Migración desde formato viejo
     CFG = { ...def, ...saved };
-    // Si viene de versión vieja con point.cred1, migrar
+    
+    // Migraciones seguras
+    if (CFG.tasaIVA === undefined) CFG.tasaIVA = def.tasaIVA;
+    if (CFG.tasaIIBB === undefined) CFG.tasaIIBB = def.tasaIIBB;
     if (saved.point && saved.point.cred1 !== undefined && !saved.point.cred1Banc) {
       CFG.point.cred1Banc  = saved.point.cred1;
       CFG.point.cred1NoBanc = saved.point.cred1;
     }
-    // Si viene de formato viejo con clover, migrar a fiserv
     if (saved.clover && !saved.fiserv) {
       CFG.fiserv = {
         deb: saved.clover.deb || def.fiserv.deb,
@@ -3348,11 +2470,6 @@ async function cargarCfg() {
         nobanc: saved.clover.cred1 || def.fiserv.nobanc
       };
     }
-    
-    // Asegurar que si el JSON guardado en la base de datos no tiene IVA/IIBB, tome los valores por defecto.
-    if (CFG.tasaIVA === undefined) CFG.tasaIVA = def.tasaIVA;
-    if (CFG.tasaIIBB === undefined) CFG.tasaIIBB = def.tasaIIBB;
-
     if (!CFG.fiserv)    CFG.fiserv    = def.fiserv;
     if (!CFG.naranja)   CFG.naranja   = def.naranja;
     if (!CFG.sol)       CFG.sol       = def.sol;
@@ -3361,11 +2478,25 @@ async function cargarCfg() {
     if (!CFG.pinHash)   CFG.pinHash   = def.pinHash;
   }
 }
+
+// 🔥 LA LÍNEA MÁGICA: Cargar configuración al abrir la app ANTES de tocar el PIN
 cargarCfg();
+
 async function init() {
   sync('loading', 'conectando...');
   document.getElementById('f-fecha').value = today();
   document.getElementById('g-fecha').value = today();
   try {
-    await Promise.all([cargarReg(), cargarCfg(), cargarGastos(), cargarAperturas()]);
+    // Al sacar cargarCfg() de acá nos aseguramos que ya está disponible tu PIN real
+    await Promise.all([cargarReg(), cargarGastos(), cargarAperturas()]);
     sync('ok', 'sincronizado');
+  } catch(e) {
+    sync('error', 'sin conexión');
+    toast('Sin conexión a la nube', 'err');
+  }
+  fillVendedores();
+  renderCajaView();
+}
+</script>
+</body>
+</html>
